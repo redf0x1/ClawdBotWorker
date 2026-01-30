@@ -213,7 +213,9 @@ if (process.env.SLACK_BOT_TOKEN && process.env.SLACK_APP_TOKEN) {
 //   https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}/anthropic
 //   https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}/openai
 const baseUrl = (process.env.AI_GATEWAY_BASE_URL || process.env.ANTHROPIC_BASE_URL || '').replace(/\/+$/, '');
-const isOpenAI = baseUrl.endsWith('/openai');
+const provider = process.env.AI_GATEWAY_PROVIDER || '';
+const customModel = process.env.AI_GATEWAY_MODEL || '';
+const isOpenAI = provider === 'openai' || (!provider && baseUrl.endsWith('/openai'));
 
 if (isOpenAI) {
     // Create custom openai provider config with baseUrl override
@@ -221,21 +223,32 @@ if (isOpenAI) {
     console.log('Configuring OpenAI provider with base URL:', baseUrl);
     config.models = config.models || {};
     config.models.providers = config.models.providers || {};
+    
+    // Use custom model if specified, otherwise use defaults
+    const defaultModels = [
+        { id: 'gpt-5.2', name: 'GPT-5.2', contextWindow: 200000 },
+        { id: 'gpt-5', name: 'GPT-5', contextWindow: 200000 },
+        { id: 'gpt-4.5-preview', name: 'GPT-4.5 Preview', contextWindow: 128000 },
+    ];
+    const models = customModel 
+        ? [{ id: customModel, name: customModel, contextWindow: 200000 }, ...defaultModels]
+        : defaultModels;
+    const primaryModel = customModel || 'gpt-5.2';
+    
     config.models.providers.openai = {
         baseUrl: baseUrl,
         api: 'openai-responses',
-        models: [
-            { id: 'gpt-5.2', name: 'GPT-5.2', contextWindow: 200000 },
-            { id: 'gpt-5', name: 'GPT-5', contextWindow: 200000 },
-            { id: 'gpt-4.5-preview', name: 'GPT-4.5 Preview', contextWindow: 128000 },
-        ]
+        models: models
     };
     // Add models to the allowlist so they appear in /models
     config.agents.defaults.models = config.agents.defaults.models || {};
+    if (customModel) {
+        config.agents.defaults.models['openai/' + customModel] = { alias: customModel };
+    }
     config.agents.defaults.models['openai/gpt-5.2'] = { alias: 'GPT-5.2' };
     config.agents.defaults.models['openai/gpt-5'] = { alias: 'GPT-5' };
     config.agents.defaults.models['openai/gpt-4.5-preview'] = { alias: 'GPT-4.5' };
-    config.agents.defaults.model.primary = 'openai/gpt-5.2';
+    config.agents.defaults.model.primary = 'openai/' + primaryModel;
 } else if (baseUrl) {
     console.log('Configuring Anthropic provider with base URL:', baseUrl);
     config.models = config.models || {};
@@ -268,7 +281,16 @@ if (isOpenAI) {
 // Write updated config
 fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 console.log('Configuration updated successfully');
-console.log('Config:', JSON.stringify(config, null, 2));
+
+// Redact sensitive fields before logging
+const safeConfig = JSON.parse(JSON.stringify(config));
+if (safeConfig.models?.providers?.anthropic?.apiKey) {
+  safeConfig.models.providers.anthropic.apiKey = '[REDACTED]';
+}
+if (safeConfig.models?.providers?.openai?.apiKey) {
+  safeConfig.models.providers.openai.apiKey = '[REDACTED]';
+}
+console.log('Config:', JSON.stringify(safeConfig, null, 2));
 EOFNODE
 
 # ============================================================

@@ -170,4 +170,83 @@ describe('buildEnvVars', () => {
     expect(result.OPENAI_BASE_URL).toBe('https://gateway.ai.cloudflare.com/v1/123/my-gw/openai');
     expect(result.AI_GATEWAY_BASE_URL).toBe('https://gateway.ai.cloudflare.com/v1/123/my-gw/openai');
   });
+
+  it('AI_GATEWAY_PROVIDER=openai overrides URL suffix detection', () => {
+    const env = createMockEnv({
+      AI_GATEWAY_API_KEY: 'sk-gateway-key',
+      AI_GATEWAY_BASE_URL: 'https://gateway.example.com/anthropic',
+      AI_GATEWAY_PROVIDER: 'openai',
+    });
+    const result = buildEnvVars(env);
+    expect(result.OPENAI_API_KEY).toBe('sk-gateway-key');
+    expect(result.OPENAI_BASE_URL).toBe('https://gateway.example.com/anthropic');
+    expect(result.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(result.AI_GATEWAY_PROVIDER).toBe('openai');
+  });
+
+  it('AI_GATEWAY_PROVIDER=anthropic overrides URL suffix detection', () => {
+    const env = createMockEnv({
+      AI_GATEWAY_API_KEY: 'sk-gateway-key',
+      AI_GATEWAY_BASE_URL: 'https://gateway.example.com/openai',
+      AI_GATEWAY_PROVIDER: 'anthropic',
+    });
+    const result = buildEnvVars(env);
+    expect(result.ANTHROPIC_API_KEY).toBe('sk-gateway-key');
+    expect(result.ANTHROPIC_BASE_URL).toBe('https://gateway.example.com/openai');
+    expect(result.OPENAI_API_KEY).toBeUndefined();
+    expect(result.AI_GATEWAY_PROVIDER).toBe('anthropic');
+  });
+
+  it('passes AI_GATEWAY_MODEL through to container env vars', () => {
+    const env = createMockEnv({
+      AI_GATEWAY_MODEL: 'claude-3-opus-20240229',
+    });
+    const result = buildEnvVars(env);
+    expect(result.AI_GATEWAY_MODEL).toBe('claude-3-opus-20240229');
+  });
+
+  it('includes both AI_GATEWAY_PROVIDER and AI_GATEWAY_MODEL when set together', () => {
+    const env = createMockEnv({
+      AI_GATEWAY_API_KEY: 'sk-gateway-key',
+      AI_GATEWAY_BASE_URL: 'https://gateway.example.com/v1',
+      AI_GATEWAY_PROVIDER: 'openai',
+      AI_GATEWAY_MODEL: 'gpt-5-mini',
+    });
+    const result = buildEnvVars(env);
+    expect(result.OPENAI_API_KEY).toBe('sk-gateway-key');
+    expect(result.OPENAI_BASE_URL).toBe('https://gateway.example.com/v1');
+    expect(result.AI_GATEWAY_PROVIDER).toBe('openai');
+    expect(result.AI_GATEWAY_MODEL).toBe('gpt-5-mini');
+  });
+
+  it('falls back to URL detection when AI_GATEWAY_PROVIDER is invalid', () => {
+    const env = createMockEnv({
+      AI_GATEWAY_API_KEY: 'key',
+      AI_GATEWAY_BASE_URL: 'https://gateway.com/openai',
+      AI_GATEWAY_PROVIDER: 'invalid' as any, // Invalid value
+    });
+    const result = buildEnvVars(env);
+    // Should fall back to URL detection, which sees /openai suffix
+    expect(result.OPENAI_API_KEY).toBe('key');
+  });
+
+  it('does not pass empty AI_GATEWAY_MODEL', () => {
+    const env = createMockEnv({
+      AI_GATEWAY_API_KEY: 'key',
+      AI_GATEWAY_BASE_URL: 'https://gateway.com/',
+      AI_GATEWAY_MODEL: '',
+    });
+    const result = buildEnvVars(env);
+    expect(result.AI_GATEWAY_MODEL).toBeUndefined();
+  });
+
+  it('passes through invalid URL format with warning', () => {
+    const env = createMockEnv({
+      AI_GATEWAY_API_KEY: 'key',
+      AI_GATEWAY_BASE_URL: 'not-a-valid-url',
+    });
+    const result = buildEnvVars(env);
+    // URL is still passed (validation is warning-only)
+    expect(result.AI_GATEWAY_BASE_URL).toBe('not-a-valid-url');
+  });
 });
