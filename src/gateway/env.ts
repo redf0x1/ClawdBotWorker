@@ -4,8 +4,16 @@ import type { MoltbotEnv } from '../types';
 const VALID_PROVIDERS = ['openai', 'anthropic'] as const;
 type ValidProvider = typeof VALID_PROVIDERS[number];
 
+// Valid AI Gateway API format values
+const VALID_API_FORMATS = ['openai-completions', 'openai-responses'] as const;
+type ValidApiFormat = typeof VALID_API_FORMATS[number];
+
 function isValidProvider(value: unknown): value is ValidProvider {
   return typeof value === 'string' && VALID_PROVIDERS.includes(value as ValidProvider);
+}
+
+function isValidApiFormat(value: unknown): value is ValidApiFormat {
+  return typeof value === 'string' && VALID_API_FORMATS.includes(value as ValidApiFormat);
 }
 
 function isValidGatewayUrl(url: string): boolean {
@@ -77,7 +85,13 @@ export function buildEnvVars(env: MoltbotEnv): Record<string, string> {
   // Pass explicit provider type, model, and API format overrides to container
   if (env.AI_GATEWAY_PROVIDER) envVars.AI_GATEWAY_PROVIDER = env.AI_GATEWAY_PROVIDER;
   if (env.AI_GATEWAY_MODEL) envVars.AI_GATEWAY_MODEL = env.AI_GATEWAY_MODEL;
-  if (env.AI_GATEWAY_API_FORMAT) envVars.AI_GATEWAY_API_FORMAT = env.AI_GATEWAY_API_FORMAT;
+  // Validate API format if explicitly set
+  if (env.AI_GATEWAY_API_FORMAT) {
+    if (!isValidApiFormat(env.AI_GATEWAY_API_FORMAT)) {
+      console.warn(`Invalid AI_GATEWAY_API_FORMAT: ${env.AI_GATEWAY_API_FORMAT}, valid values are: ${VALID_API_FORMATS.join(', ')}`);
+    }
+    envVars.AI_GATEWAY_API_FORMAT = env.AI_GATEWAY_API_FORMAT;
+  }
   // Map MOLTBOT_GATEWAY_TOKEN to CLAWDBOT_GATEWAY_TOKEN (container expects this name)
   if (env.MOLTBOT_GATEWAY_TOKEN) envVars.CLAWDBOT_GATEWAY_TOKEN = env.MOLTBOT_GATEWAY_TOKEN;
   if (env.DEV_MODE) envVars.CLAWDBOT_DEV_MODE = env.DEV_MODE; // Pass DEV_MODE as CLAWDBOT_DEV_MODE to container

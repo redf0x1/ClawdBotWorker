@@ -294,7 +294,14 @@ if (safeConfig.models?.providers?.anthropic?.apiKey) {
 if (safeConfig.models?.providers?.openai?.apiKey) {
   safeConfig.models.providers.openai.apiKey = '[REDACTED]';
 }
-console.log('Config:', JSON.stringify(safeConfig, null, 2));
+if (safeConfig.gateway?.auth?.token) {
+  safeConfig.gateway.auth.token = '[REDACTED]';
+}
+// Remove channels entirely to avoid logging chat bot tokens
+if (safeConfig.channels) {
+  delete safeConfig.channels;
+}
+console.log('Config (redacted):', JSON.stringify(safeConfig, null, 2));
 EOFNODE
 
 # ============================================================

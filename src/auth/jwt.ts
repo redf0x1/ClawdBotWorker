@@ -9,12 +9,16 @@ import type { JWTPayload } from '../types';
  * @returns Normalized domain (e.g., 'myteam.cloudflareaccess.com')
  */
 export function normalizeTeamDomain(teamDomain: string): string {
-  // Remove trailing slashes
-  let domain = teamDomain.replace(/\/+$/, '');
-  // Add .cloudflareaccess.com if not present
-  if (!domain.endsWith('.cloudflareaccess.com')) {
+  // Remove https:// if present and trailing slashes
+  let domain = teamDomain
+    .replace(/^https?:\/\//, '')
+    .replace(/\/+$/, '');
+
+  // If it's just a team name (no dots), add the Access domain suffix
+  if (!domain.includes('.')) {
     domain = `${domain}.cloudflareaccess.com`;
   }
+
   return domain;
 }
 

@@ -249,4 +249,14 @@ describe('buildEnvVars', () => {
     // URL is still passed (validation is warning-only)
     expect(result.AI_GATEWAY_BASE_URL).toBe('not-a-valid-url');
   });
+
+  it('passes AI_GATEWAY_API_FORMAT through to container env vars', () => {
+    const env = createMockEnv({
+      AI_GATEWAY_API_KEY: 'key',
+      AI_GATEWAY_BASE_URL: 'https://gateway.com/',
+      AI_GATEWAY_API_FORMAT: 'openai-completions',
+    });
+    const result = buildEnvVars(env);
+    expect(result.AI_GATEWAY_API_FORMAT).toBe('openai-completions');
+  });
 });
