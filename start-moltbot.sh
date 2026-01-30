@@ -39,30 +39,30 @@ mkdir -p "$CONFIG_DIR"
 should_restore_from_r2() {
     local R2_SYNC_FILE="$BACKUP_DIR/.last-sync"
     local LOCAL_SYNC_FILE="$CONFIG_DIR/.last-sync"
-    
+
     # If no R2 sync timestamp, don't restore
     if [ ! -f "$R2_SYNC_FILE" ]; then
         echo "No R2 sync timestamp found, skipping restore"
         return 1
     fi
-    
+
     # If no local sync timestamp, restore from R2
     if [ ! -f "$LOCAL_SYNC_FILE" ]; then
         echo "No local sync timestamp, will restore from R2"
         return 0
     fi
-    
+
     # Compare timestamps
     R2_TIME=$(cat "$R2_SYNC_FILE" 2>/dev/null)
     LOCAL_TIME=$(cat "$LOCAL_SYNC_FILE" 2>/dev/null)
-    
+
     echo "R2 last sync: $R2_TIME"
     echo "Local last sync: $LOCAL_TIME"
-    
+
     # Convert to epoch seconds for comparison
     R2_EPOCH=$(date -d "$R2_TIME" +%s 2>/dev/null || echo "0")
     LOCAL_EPOCH=$(date -d "$LOCAL_TIME" +%s 2>/dev/null || echo "0")
-    
+
     if [ "$R2_EPOCH" -gt "$LOCAL_EPOCH" ]; then
         echo "R2 backup is newer, will restore"
         return 0
@@ -223,23 +223,27 @@ if (isOpenAI) {
     console.log('Configuring OpenAI provider with base URL:', baseUrl);
     config.models = config.models || {};
     config.models.providers = config.models.providers || {};
-    
+
     // Use custom model if specified, otherwise use defaults
     const defaultModels = [
         { id: 'gpt-5.2', name: 'GPT-5.2', contextWindow: 200000 },
         { id: 'gpt-5', name: 'GPT-5', contextWindow: 200000 },
         { id: 'gpt-4.5-preview', name: 'GPT-4.5 Preview', contextWindow: 128000 },
     ];
-    const models = customModel 
+    const models = customModel
         ? [{ id: customModel, name: customModel, contextWindow: 200000 }, ...defaultModels]
         : defaultModels;
     const primaryModel = customModel || 'gpt-5.2';
-    
+
     config.models.providers.openai = {
         baseUrl: baseUrl,
-        api: 'openai-responses',
+        api: process.env.AI_GATEWAY_API_FORMAT || 'openai-completions',
         models: models
     };
+    // Include API key in provider config if set (required when using custom baseUrl)
+    if (process.env.OPENAI_API_KEY) {
+        config.models.providers.openai.apiKey = process.env.OPENAI_API_KEY;
+    }
     // Add models to the allowlist so they appear in /models
     config.agents.defaults.models = config.agents.defaults.models || {};
     if (customModel) {

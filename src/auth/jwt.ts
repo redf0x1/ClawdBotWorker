@@ -2,6 +2,23 @@ import { jwtVerify, createRemoteJWKSet, type JWTPayload as JoseJWTPayload } from
 import type { JWTPayload } from '../types';
 
 /**
+ * Normalize a Cloudflare Access team domain.
+ * Handles cases where user provides just the team name or the full domain.
+ *
+ * @param teamDomain - Team domain (e.g., 'myteam' or 'myteam.cloudflareaccess.com')
+ * @returns Normalized domain (e.g., 'myteam.cloudflareaccess.com')
+ */
+export function normalizeTeamDomain(teamDomain: string): string {
+  // Remove trailing slashes
+  let domain = teamDomain.replace(/\/+$/, '');
+  // Add .cloudflareaccess.com if not present
+  if (!domain.endsWith('.cloudflareaccess.com')) {
+    domain = `${domain}.cloudflareaccess.com`;
+  }
+  return domain;
+}
+
+/**
  * Verify a Cloudflare Access JWT token using the jose library.
  *
  * This follows Cloudflare's recommended approach:
@@ -18,10 +35,13 @@ export async function verifyAccessJWT(
   teamDomain: string,
   expectedAud: string
 ): Promise<JWTPayload> {
+  // Normalize team domain
+  const normalizedDomain = normalizeTeamDomain(teamDomain);
+
   // Ensure teamDomain has https:// prefix for issuer check
-  const issuer = teamDomain.startsWith('https://')
-    ? teamDomain
-    : `https://${teamDomain}`;
+  const issuer = normalizedDomain.startsWith('https://')
+    ? normalizedDomain
+    : `https://${normalizedDomain}`;
 
   // Create JWKS from the team domain
   const JWKS = createRemoteJWKSet(new URL(`${issuer}/cdn-cgi/access/certs`));

@@ -101,7 +101,7 @@ describe('buildEnvVars', () => {
       SLACK_APP_TOKEN: 'slack-app',
     });
     const result = buildEnvVars(env);
-    
+
     expect(result.TELEGRAM_BOT_TOKEN).toBe('tg-token');
     expect(result.TELEGRAM_DM_POLICY).toBe('pairing');
     expect(result.DISCORD_BOT_TOKEN).toBe('discord-token');
@@ -116,7 +116,7 @@ describe('buildEnvVars', () => {
       CLAWDBOT_BIND_MODE: 'lan',
     });
     const result = buildEnvVars(env);
-    
+
     expect(result.CLAWDBOT_DEV_MODE).toBe('true');
     expect(result.CLAWDBOT_BIND_MODE).toBe('lan');
   });
@@ -128,7 +128,7 @@ describe('buildEnvVars', () => {
       TELEGRAM_BOT_TOKEN: 'tg',
     });
     const result = buildEnvVars(env);
-    
+
     expect(result).toEqual({
       ANTHROPIC_API_KEY: 'sk-key',
       CLAWDBOT_GATEWAY_TOKEN: 'token',
